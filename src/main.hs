@@ -6,8 +6,10 @@ import Data.Array
 import Control.Monad
 import System.Environment (getArgs, getProgName)
 
+import PhysicalObjects as PObj
 import GraphicalObjects as GObj
-import AlgorithmObjects
+import AlgorithmObjects as AObj
+import AlgoPhysObject as APObj
 
 data Action = Action (IO Action)
 
@@ -129,12 +131,15 @@ render lines = do
     GL.color $ color3 1 0 0
     GL.renderPrimitive GL.Lines $ mapM_
         (\ (x, y) -> GL.vertex (vertex3 (fromIntegral x) (fromIntegral y) 0)) l
-    draw . makeGraphics $ Graph {
-        resources  = listArray (0, 2) $ map Resource [1..],
-        processors = listArray (0, 1) $ map Processor [1..],
-        links      = listArray ((0,0),(2,1)) $ map Link [1..]
-    }
-
+    let makeStandartBalls = map (\(x,y) -> Ball (PObj.Vector x y) (PObj.Vector 0 0) 1)
+    draw . makeGraphics $ APObj.Object (Graph {
+        AObj.resources  = listArray (0, 2) $ map Resource [1..],
+        AObj.processors = listArray (0, 1) $ map Processor [1..],
+        AObj.links      = listArray ((0,0),(2,1)) $ map Link [1..]
+    }) (PObj.PlayGround {
+        PObj.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
+        PObj.processors = makeStandartBalls [(150, 30), (150, 60)]
+    })
 
 vertex3 :: GLfloat -> GLfloat -> GLfloat -> GL.Vertex3 GLfloat
 vertex3 = GL.Vertex3
