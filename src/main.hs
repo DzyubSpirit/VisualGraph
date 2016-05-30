@@ -51,10 +51,14 @@ main' run = do
     playGround <- newIORef $ APObj.Object (Graph {
         AObj.resources  = listArray (0, 2) $ map Resource [1..],
         AObj.processors = listArray (0, 1) $ map Processor [1..],
-        AObj.links      = listArray ((0,0),(2,1)) $ map Link [1..]
+        AObj.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just $ Link x) 
+                                                    [1, 5, 0, 7, 0, 2]
     }) (PObj.PlayGround {
         PObj.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
-        PObj.processors = makeStandartBalls [(150, 30), (150, 60)]
+        PObj.processors = makeStandartBalls [(150, 30), (150, 60)],
+        PObj.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just (50, 0.001)) 
+                                                    [1, 5, 0, 7, 0, 2],
+        PObj.borders    = (0, 0, windowWidth, windowHeight)
     })
 
     run playGround
@@ -76,10 +80,7 @@ active playGround = loop waitForPress
 
                     windowOpen <- getParam Opened
                     unless (not windowOpen) $ do
-                        modifyIORef playGround $
-                            putInBorders (0, windowWidth) 
-                                         (0, windowHeight) 
-                                         . next 1
+                        modifyIORef playGround $ next 1
                         loop action'
 
         waitForPress = do

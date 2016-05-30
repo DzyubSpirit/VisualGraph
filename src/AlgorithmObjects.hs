@@ -11,5 +11,5 @@ newtype Link      = Link Double
 data Graph = Graph {
     resources  :: Array Int Resource,
     processors :: Array Int Processor,
-    links      :: Array (Int, Int) Link
+    links      :: Array (Int, Int) (Maybe Link)
 }

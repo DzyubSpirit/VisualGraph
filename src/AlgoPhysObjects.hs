@@ -3,6 +3,7 @@ module AlgoPhysObject where
 import Graphics.Rendering.OpenGL as GL
 import Data.Array
 import Data.List((!!))
+import Data.Maybe(maybe, isJust)
 
 import PhysicalObjects as PObj
 import AlgorithmObjects as AObj
@@ -26,13 +27,17 @@ instance Timeable Object where
 
 makeGraphics :: Object -> GObj.PlayGround
 makeGraphics obj = GObj.PlayGround objects
-    where (Graph resources processors linkes) = graph obj
-          (PObj.PlayGround ballReses ballProcs) = balls obj
+    where (Graph resources processors links) = graph obj
+          playGround = balls obj
+          ballReses  = PObj.resources playGround
+          ballProcs  = PObj.processors playGround
 
           objects = resObjs ++ procObjs ++ linkObjs
           resObjs  = map (makeCircle (Color3 0 0 1)) resPos
           procObjs = map (makeCircle (Color3 0 1 0)) procPos
-          linkObjs = [makeLine (Color3 1 1 1) p1 p2 | p1 <- resPos, p2 <- procPos]
+          linkObjs = [makeLine (Color3 1 1 1) p1 p2 | (i, p1) <- zip [0..] resPos, 
+                                                      (j, p2) <- zip [0..] procPos,
+                                                      isJust (links ! (i, j))]
           
           positions posFunc array = map (\(i, val) -> posFunc i) $ assocs array
           makeCircle color position = GObj.ColorObject color $
