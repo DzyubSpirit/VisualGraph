@@ -18,6 +18,9 @@ main = do
     prog <- getProgName
     main' active
 
+windowWidth = 640
+windowHeight = 480
+
 main' run = do
     GLFW.initialize
     GLFW.openWindow (GL.Size 640 480) [GLFW.DisplayAlphaBits 8] GLFW.Window
@@ -38,16 +41,32 @@ main' run = do
             GL.loadIdentity
             GL.ortho2D 0 (realToFrac w) (realToFrac h) 0
 
-    lines <- newIORef []
-    run lines
+    let makeStandartBalls = map (\(x,y) -> Ball {
+            coord = PObj.Vector x y,
+            speed = PObj.Vector 0 0,
+            acc   = PObj.Vector 0 0,
+            radius = 10,
+            mass  = 1
+        })
+    playGround <- newIORef $ APObj.Object (Graph {
+        AObj.resources  = listArray (0, 2) $ map Resource [1..],
+        AObj.processors = listArray (0, 1) $ map Processor [1..],
+        AObj.links      = listArray ((0,0),(2,1)) $ map Link [1..]
+    }) (PObj.PlayGround {
+        PObj.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
+        PObj.processors = makeStandartBalls [(150, 30), (150, 60)]
+    })
+
+    run playGround
 
     GLFW.closeWindow
     GLFW.terminate    
 
-active lines = loop waitForPress
+
+active playGround = loop waitForPress
     where
         loop action = do
-            render lines
+            render playGround
             GLFW.swapBuffers
             p <- GLFW.getKey GLFW.ESC
             unless (p == GLFW.Press) $
@@ -56,7 +75,11 @@ active lines = loop waitForPress
                     GLFW.sleep 0.001
 
                     windowOpen <- getParam Opened
-                    unless (not windowOpen) $
+                    unless (not windowOpen) $ do
+                        modifyIORef playGround $
+                            putInBorders (0, windowWidth) 
+                                         (0, windowHeight) 
+                                         . next 1
                         loop action'
 
         waitForPress = do
@@ -65,81 +88,19 @@ active lines = loop waitForPress
                 GLFW.Release -> return (Action waitForPress)
                 GLFW.Press   -> do
                     (GL.Position x y) <- GL.get GLFW.mousePos
-                    modifyIORef lines (((x,y):) . ((x,y):))
                     return (Action waitForRelease)
 
         waitForRelease = do
             (GL.Position x y) <- GL.get GLFW.mousePos
-            modifyIORef lines (((x,y):).tail)
             b <- GLFW.getMouseButton GLFW.ButtonLeft
             case b of
                 GLFW.Release -> return (Action waitForPress)
                 GLFW.Press   -> return (Action waitForRelease)
 
-passive lines = do
-    GLFW.disableSpecial GLFW.AutoPollEvent
-
-    quit <- newIORef False
-
-    dirty <- newIORef True
-
-    GLFW.windowRefreshCallback $= writeIORef dirty True
-
-    GLFW.keyCallback $= \k s ->
-        when (fromEnum k == fromEnum GLFW.ESC && s == GLFW.Press) $
-            writeIORef quit True
-
-    GLFW.windowCloseCallback $= (writeIORef quit True >> return True)
-
-    waitForPress dirty
-    loop dirty quit
-    where
-        loop dirty quit = do
-            GLFW.waitEvents
-
-            d <- readIORef dirty
-            when d $
-                render lines >> GLFW.swapBuffers
-            writeIORef dirty False
-            q <- readIORef quit
-            unless q $
-                loop dirty quit
-
-        waitForPress dirty =
-            do
-                GLFW.mousePosCallback $= \_ -> return ()
-                GLFW.mouseButtonCallback $= \b s ->
-                    when (b == GLFW.ButtonLeft && s == GLFW.Press) $
-                        do
-                            (GL.Position x y) <- GL.get GLFW.mousePos
-                            modifyIORef lines (((x,y):) . ((x,y):))
-                            waitForRelease dirty
-
-        waitForRelease dirty =
-            do
-                GLFW.mousePosCallback $= \(Position x y) ->
-                    do
-                        modifyIORef lines (((x,y):) . tail)
-                        writeIORef dirty True
-                GLFW.mouseButtonCallback $= \b s ->
-                    when (b == GLFW.ButtonLeft && s == GLFW.Release) $
-                        waitForPress dirty
-
-render lines = do
-    l <- readIORef lines
+render playGround = do
+    pg <- readIORef playGround
     GL.clear [GL.ColorBuffer]
-    GL.color $ color3 1 0 0
-    GL.renderPrimitive GL.Lines $ mapM_
-        (\ (x, y) -> GL.vertex (vertex3 (fromIntegral x) (fromIntegral y) 0)) l
-    let makeStandartBalls = map (\(x,y) -> Ball (PObj.Vector x y) (PObj.Vector 0 0) 1)
-    draw . makeGraphics $ APObj.Object (Graph {
-        AObj.resources  = listArray (0, 2) $ map Resource [1..],
-        AObj.processors = listArray (0, 1) $ map Processor [1..],
-        AObj.links      = listArray ((0,0),(2,1)) $ map Link [1..]
-    }) (PObj.PlayGround {
-        PObj.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
-        PObj.processors = makeStandartBalls [(150, 30), (150, 60)]
-    })
+    draw . makeGraphics $ pg
 
 vertex3 :: GLfloat -> GLfloat -> GLfloat -> GL.Vertex3 GLfloat
 vertex3 = GL.Vertex3

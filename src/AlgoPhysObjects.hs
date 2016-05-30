@@ -13,16 +13,16 @@ data Object = Object {
     balls :: PObj.PlayGround
 } 
 
-linearObjectComposition :: Position -> Position -> Int -> Position
-linearObjectComposition x0 dx i = GObj.add x0 $ GObj.mult i dx
+instance CoordModifyable Object where
+    modify f obj = obj {
+        balls = modify f (balls obj) 
+    }
 
-defaultResourcePosition :: Int -> Position
-defaultResourcePosition = linearObjectComposition (Position 50 50) 
-                                                  (Position 0 40)
 
-defaultProcessorPosition :: Int -> Position
-defaultProcessorPosition = linearObjectComposition (Position 300 50) 
-                                                   (Position 0 40)
+instance Timeable Object where
+    next dt obj = obj {
+        balls = next dt (balls obj)
+    }
 
 makeGraphics :: Object -> GObj.PlayGround
 makeGraphics obj = GObj.PlayGround objects
