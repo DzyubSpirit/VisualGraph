@@ -1,3 +1,5 @@
+module Main where
+
 import Graphics.Rendering.OpenGL as GL
 import Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL(($=))
@@ -6,10 +8,14 @@ import Data.Array
 import Control.Monad
 import System.Environment (getArgs, getProgName)
 
-import PhysicalObjects as PObj
-import GraphicalObjects as GObj
-import AlgorithmObjects as AObj
-import AlgoPhysObject as APObj
+import Physic.PlayGround as P
+import Physic.Vector
+import Physic.Ball
+import Physic.Timeable
+import Graphic.PlayGround as G
+import Graphic.Drawable
+import Algorithm.Graph as A
+import GraphBalls as GB
 
 data Action = Action (IO Action)
 
@@ -42,23 +48,23 @@ main' run = do
             GL.ortho2D 0 (realToFrac w) (realToFrac h) 0
 
     let makeStandartBalls = map (\(x,y) -> Ball {
-            coord = PObj.Vector x y,
-            speed = PObj.Vector 0 0,
-            acc   = PObj.Vector 0 0,
+            coord = Vector x y,
+            speed = Vector 0 0,
+            acc   = Vector 0 0,
             radius = 10,
             mass  = 1
         })
-    playGround <- newIORef $ APObj.Object (Graph {
-        AObj.resources  = listArray (0, 2) $ map Resource [1..],
-        AObj.processors = listArray (0, 1) $ map Processor [1..],
-        AObj.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just $ Link x) 
+    playGround <- newIORef $ GraphBalls (Graph {
+        A.resources  = listArray (0, 2) $ map Resource [1..],
+        A.processors = listArray (0, 1) $ map Processor [1..],
+        A.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just $ Link x) 
                                                     [1, 5, 0, 7, 0, 2]
-    }) (PObj.PlayGround {
-        PObj.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
-        PObj.processors = makeStandartBalls [(150, 30), (150, 60)],
-        PObj.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just (50, 0.001)) 
+    }) (P.PlayGround {
+        P.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
+        P.processors = makeStandartBalls [(150, 30), (150, 60)],
+        P.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just (50, 0.001)) 
                                                     [1, 5, 0, 7, 0, 2],
-        PObj.borders    = (0, 0, windowWidth, windowHeight)
+        P.borders    = (0, 0, windowWidth, windowHeight)
     })
 
     run playGround

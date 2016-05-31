@@ -1,4 +1,4 @@
-module AlgorithmObjects where
+module Algorithm.Graph where
 
 import Data.Array
 
