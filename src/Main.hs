@@ -24,12 +24,15 @@ main = do
     prog <- getProgName
     main' active
 
-windowWidth = 640
-windowHeight = 480
+standartWindowWidth  = 400
+standartWindowHeight = 400
 
 main' run = do
     GLFW.initialize
-    GLFW.openWindow (GL.Size 640 480) [GLFW.DisplayAlphaBits 8] GLFW.Window
+    let size = (GL.Size standartWindowWidth standartWindowHeight)
+    windowSize <- newIORef size
+    
+    GLFW.openWindow size [GLFW.DisplayAlphaBits 8] GLFW.Window
     GLFW.windowTitle $= "GLFW Demo"
     GL.shadeModel $= GL.Smooth
 
@@ -46,34 +49,41 @@ main' run = do
             GL.matrixMode $= GL.Projection
             GL.loadIdentity
             GL.ortho2D 0 (realToFrac w) (realToFrac h) 0
+            modifyIORef windowSize $ const size
 
-    let makeStandartBalls = map (\(x,y) -> Ball {
-            coord = Vector x y,
-            speed = Vector 0 0,
-            acc   = Vector 0 0,
-            radius = 10,
-            mass  = 1
-        })
-    playGround <- newIORef $ GraphBalls (Graph {
-        A.resources  = listArray (0, 2) $ map Resource [1..],
-        A.processors = listArray (0, 1) $ map Processor [1..],
-        A.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just $ Link x) 
-                                                    [1, 5, 0, 7, 0, 2]
-    }) (P.PlayGround {
-        P.resources  = makeStandartBalls [(50, 50), (50, 100),(50,150)], 
-        P.processors = makeStandartBalls [(150, 30), (150, 60)],
-        P.links      = listArray ((0,0),(2,1)) $ map (\x -> if x == 0 then Nothing else Just (50, 0.001)) 
-                                                    [1, 5, 0, 7, 0, 2],
-        P.borders    = (0, 0, windowWidth, windowHeight)
-    })
+    let w = fromIntegral standartWindowWidth
+        h = fromIntegral standartWindowHeight
+    
+    playGround <- readFile "res/graph.txt" >>= 
+                    newIORef . readGraphBalls (0,0,w,h)
+    --playGround <- newIORef $ GraphBalls (Graph {
+    --    A.resources  = listArray (0, 4) $ map Resource [1..],
+    --    A.processors = listArray (0, 3) $ map Processor [1..],
+    --    A.links      = listArray ((0,0),(4,3)) $ map (\x -> if x == 0 then Nothing else Just $ Link x) 
+    --                                                [0, 5, 0, 7, 
+    --                                                 0, 2, 0, 0, 
+    --                                                 6, 0, 0, 6, 
+    --                                                 6, 0, 0, 0, 
+    --                                                 0, 5, 5, 0]
+    --}) (P.PlayGround {
+    --    P.resources  = makeStandartBalls [(50, 50), (50, 100), (50,150), (50, 200), (50, 250)], 
+    --    P.processors = makeStandartBalls [(150, 30), (150, 60), (150, 90), (150, 120)],
+    --    P.links      = listArray ((0,0),(4,3)) $ map (\x -> if x == 0 then Nothing else Just (50, 0.001)) 
+    --                                                [0, 5, 0, 7, 
+    --                                                 0, 2, 0, 0, 
+    --                                                 6, 0, 0, 6, 
+    --                                                 6, 0, 0, 0, 
+    --                                                 0, 5, 5, 0],
+    --    P.borders    = (0, 0, w, h)
+    --})
 
-    run playGround
+    run playGround windowSize
 
     GLFW.closeWindow
     GLFW.terminate    
 
 
-active playGround = loop waitForPress
+active playGround windowSize = loop waitForPress
     where
         loop action = do
             render playGround
@@ -86,7 +96,10 @@ active playGround = loop waitForPress
 
                     windowOpen <- getParam Opened
                     unless (not windowOpen) $ do
-                        modifyIORef playGround $ next 1
+                        (GL.Size w h) <- readIORef windowSize 
+                        modifyIORef playGround $ changeBorders 
+                                                    (0, 0, fromIntegral w, fromIntegral h)
+                                               . next 1
                         loop action'
 
         waitForPress = do
