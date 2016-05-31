@@ -14,7 +14,7 @@ instance Drawable Object where
         mapM_ positionToVertex [p1, p2]
     draw (Circle p r) = GL.renderPrimitive GL.LineStrip $
         mapM_ positionToVertex points
-            where angles = map ((*(pi/180)) . fromIntegral) [0,3..360]
+            where angles = map ((*(pi/180)) . fromIntegral) [0,10..360]
                   xes = map cos angles
                   yes = map sin angles
                   points = map (add p) $ zipWith (GL.Position `on` (round . (*r))) xes yes

@@ -63,7 +63,7 @@ readGraphBalls borders str =
                       func2 i = filter (/= 0) $ map (!!i) links
         linkValues = listArray ((0,0),(n-1,n-1)) clinks
         links' = fmap mapFunc linkValues
-            where mapFunc x = if x/=0 then Just . Link $ x else Nothing
+            where mapFunc x = if x/=0 then Just (Link x False) else Nothing
     
         makeStandartBalls = map (\(x,y,r) -> Ball {
             coord = Vector x y,
@@ -74,7 +74,7 @@ readGraphBalls borders str =
         })
 
     in GraphBalls {
-        graph = Graph {
+        graph = calculateSolution $ Graph {
             A.resources = resArray,
             A.processors = procArray,
             A.links = links'
@@ -111,15 +111,18 @@ makeGraphics obj = G.PlayGround objects
           objects = linkObjs ++ resObjs ++ procObjs
           resObjs  = map (makeCircle (Color3 0 0 1)) $ zip resPos resRadius
           procObjs = map (makeCircle (Color3 0 1 0)) $ zip procPos procRadius
-          linkObjs = [makeLine (Color3 1 1 1) p1 p2 | (i, p1) <- zip [0..] resPos,
+          linkObjs = [makeLine (links!(i,j)) p1 p2 | (i, p1) <- zip [0..] resPos,
                                                       (j, p2) <- zip [0..] procPos,
                                                       isJust (links ! (i, j))]
           
           positions posFunc array = map (\(i, val) -> posFunc i) $ assocs array
           makeCircle color (position, radius) = ColorObject color $
                                       Circle position radius
-          makeLine color p1 p2 = ColorObject color $
-                                 G.Line p1 p2
+          makeLine (Just (Link _ s)) p1 p2 = ColorObject 
+                                            (if s 
+                                             then  Color3 1 1 1
+                                             else Color3 0.75 0.25 0.25) $
+                                             G.Line p1 p2
 
           resPos  = map getPos ballReses
           procPos = map getPos ballProcs
